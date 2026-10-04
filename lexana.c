@@ -1,128 +1,108 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-
-char keywords[][20] = {
-    "int", "float", "char", "double", "if", "else",
-    "while", "for", "return", "void", "break",
-    "continue", "do", "switch", "case", "default",
-    "long", "short", "unsigned", "signed", "const"
-};
-
-int isKeyword(char str[]) {
-    int n = sizeof(keywords) / sizeof(keywords[0]);
-    for (int i = 0; i < n; i++) {
-        if (strcmp(str, keywords[i]) == 0)
-            return 1;
-    }
-    return 0;
+#define MAX_KEYWORDS 5
+#define MAX_BUFFER 256
+const char *keywords[MAX_KEYWORDS] = {"int", "void", "main", "return", "include"};
+const char operators[] = "+-*/%=";
+const char punctuation[] = ",;{}()[]";
+int isKeyword(char *word) {
+ for (int i = 0; i < MAX_KEYWORDS; i++) {
+ if (strcmp(word, keywords[i]) == 0)
+ return 1;
+ }
+ return 0;
 }
-
+int isOperator(char ch) {
+ for (int i = 0; i < strlen(operators); i++) {
+ if (ch == operators[i])
+ return 1;
+ }
+ return 0;
+}
+int isPunctuation(char ch) {
+ for (int i = 0; i < strlen(punctuation); i++) {
+ if (ch == punctuation[i])
+ return 1;
+ }
+ return 0;
+}
+void lexer(char *filename) {
+ FILE *file = fopen(filename, "r");
+ if (!file) {
+ printf("Unable to open file.\n");
+ return;
+ }
+ char ch, buffer[MAX_BUFFER];
+ int i = 0;
+ while ((ch = fgetc(file)) != EOF) {
+ // Ignore white spaces, tabs, and new lines
+ if (isspace(ch)) continue;
+ // Handle comments
+ if (ch == '/') {
+7 char next = fgetc(file);
+ if (next == '/') {
+ while ((ch = fgetc(file)) != '\n' && ch != EOF);
+ continue;
+ } else if (next == '*') {
+ while (1) {
+ ch = fgetc(file);
+ if (ch == '*' && (ch = fgetc(file)) == '/') break;
+ if (ch == EOF) break;
+ }
+ continue;
+ } else {
+ ungetc(next, file);
+ }
+ }
+ // Collect a word
+ if (isalpha(ch)) {
+ buffer[i++] = ch;
+ while ((ch = fgetc(file)) != EOF && (isalnum(ch) || ch == '_')) {
+ buffer[i++] = ch;
+ }
+ buffer[i] = '\0';
+ ungetc(ch, file);
+ if (isKeyword(buffer)) {
+ printf("%s is a keyword\n", buffer);
+ } else {
+ printf("%s is an identifier\n", buffer);
+ }
+ i = 0;
+ }
+ // Collect numbers
+ else if (isdigit(ch)) {
+ buffer[i++] = ch;
+ while ((ch = fgetc(file)) != EOF && isdigit(ch)) {
+ buffer[i++] = ch;
+ }
+ buffer[i] = '\0';
+ ungetc(ch, file);
+ printf("%s is a constant\n", buffer);
+ i = 0;
+ }
+ // Operators
+ else if (isOperator(ch)) {
+ printf("%c is an operator\n", ch);
+ }
+ // Punctuation
+ else if (isPunctuation(ch)) {
+ printf("%c is a punctuation\n", ch);
+ }
+ }
+8 fclose(file);
+}
 int main() {
-    FILE *fp;
-    char ch, buffer[100];
-    int i = 0;
-
-    fp = fopen("input.c", "r");
-
-    if (fp == NULL) {
-        printf("Cannot open file.\n");
-        return 0;
-    }
-
-    while ((ch = fgetc(fp)) != EOF) {
-
-        
-        if (isspace(ch))
-            continue;
-
-      
-        if (ch == '/') {
-            char next = fgetc(fp);
-
-            if (next == '/') {
-                while ((ch = fgetc(fp)) != '\n' && ch != EOF);
-            }
-            else if (next == '*') {
-                char prev = 0;
-                while ((ch = fgetc(fp)) != EOF) {
-                    if (prev == '*' && ch == '/')
-                        break;
-                    prev = ch;
-                }
-            }
-            else {
-                printf("%c : Operator\n", '/');
-                fseek(fp, -1, SEEK_CUR);
-            }
-        }
-
-        
-        else if (isalpha(ch) || ch == '_') {
-            i = 0;
-            buffer[i++] = ch;
-
-            while ((ch = fgetc(fp)) != EOF &&
-                   (isalnum(ch) || ch == '_')) {
-                buffer[i++] = ch;
-            }
-
-            buffer[i] = '\0';
-
-            if (isKeyword(buffer))
-                printf("%s : Keyword\n", buffer);
-            else
-                printf("%s : Identifier\n", buffer);
-
-            if (ch != EOF)
-                fseek(fp, -1, SEEK_CUR);
-        }
-
-        
-        else if (isdigit(ch)) {
-            i = 0;
-            buffer[i++] = ch;
-
-            while ((ch = fgetc(fp)) != EOF &&
-                   (isdigit(ch) || ch == '.')) {
-                buffer[i++] = ch;
-            }
-
-            buffer[i] = '\0';
-            printf("%s : Number\n", buffer);
-
-            if (ch != EOF)
-                fseek(fp, -1, SEEK_CUR);
-        }
-
-        else if (ch == '"') {
-            i = 0;
-            while ((ch = fgetc(fp)) != '"' && ch != EOF) {
-                buffer[i++] = ch;
-            }
-            buffer[i] = '\0';
-            printf("\"%s\" : String Literal\n", buffer);
-        }
-
-        
-        else if (ch == '\'') {
-            char c = fgetc(fp);
-            fgetc(fp);
-            printf("'%c' : Character Literal\n", c);
-        }
-
-       
-        else if (strchr("+-*=<>!%&|", ch)) {
-            printf("%c : Operator\n", ch);
-        }
-
-        
-        else if (strchr("(){}[];,", ch)) {
-            printf("%c : Special Symbol\n", ch);
-        }
-    }
-
-    fclose(fp);
-    return 0;
+ lexer("input.c");
+ return 0;
 }
-
+Input
+# include<stdio.h>
+void main()
+{
+ int a , b , c ;
+ a = 10 ;
+ b = 20 ;
+ c = a / b ;
+ printf ( "%d\n", c ) ;
+}
